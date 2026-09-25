@@ -116,10 +116,10 @@
         <a class="ghost" href="https://github.com/buntui/rental-progress">View GitHub repo</a>
       </div>
       <div class="stats">
-        <div class="stat"><strong id="total-count">15</strong><span>Total applications</span></div>
-        <div class="stat"><strong id="progress-count">3</strong><span>In progress</span></div>
-        <div class="stat"><strong id="submitted-count">6</strong><span>Submitted</span></div>
-        <div class="stat"><strong id="activity-count">6</strong><span>Opened / email activity</span></div>
+        <div class="stat"><strong id="total-count">16</strong><span>Total applications</span></div>
+        <div class="stat"><strong id="progress-count">2</strong><span>In progress</span></div>
+        <div class="stat"><strong id="submitted-count">3</strong><span>Submitted</span></div>
+        <div class="stat"><strong id="activity-count">11</strong><span>Opened / email activity</span></div>
       </div>
     </section>
 
@@ -185,7 +185,7 @@
         return '<article class="card"><span class="status ' + statusClass + '">' +
           (labels[app.status] || "Update") + '</span><div class="address">' +
           safeProperty + '</div><p class="desc">' +
-          (descriptions[app.status] || "Status updated from Zillow email.") +
+          (app.note || descriptions[app.status] || "Status updated from Zillow email.") +
           '</p></article>';
       }).join("");
 
