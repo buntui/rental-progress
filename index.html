@@ -89,6 +89,9 @@
     .in-progress { background: var(--amber); }
     .submitted { background: var(--blue); }
     .opened { background: var(--green); }
+    .approved { background: #087350; }
+    .declined { background: #b42318; }
+    .message { background: var(--violet); }
     .address { margin: 13px 0 8px; font-size: 21px; font-weight: 950; line-height: 1.12; letter-spacing: -.035em; }
     .desc { margin: 0; color: var(--muted); line-height: 1.4; font-size: 14px; }
     @media (max-width: 960px) { .grid { grid-template-columns: repeat(2, 1fr); } .stats { grid-template-columns: repeat(2, 1fr); } }
@@ -113,19 +116,19 @@
         <a class="ghost" href="https://github.com/buntui/rental-progress">View GitHub repo</a>
       </div>
       <div class="stats">
-        <div class="stat"><strong>15</strong><span>Total applications</span></div>
-        <div class="stat"><strong>3</strong><span>In progress</span></div>
-        <div class="stat"><strong>9</strong><span>Submitted</span></div>
-        <div class="stat"><strong>3</strong><span>Opened / email activity</span></div>
+        <div class="stat"><strong id="total-count">15</strong><span>Total applications</span></div>
+        <div class="stat"><strong id="progress-count">3</strong><span>In progress</span></div>
+        <div class="stat"><strong id="submitted-count">6</strong><span>Submitted</span></div>
+        <div class="stat"><strong id="activity-count">6</strong><span>Opened / email activity</span></div>
       </div>
     </section>
 
     <section class="board">
       <div class="board-head">
         <h2>Application board</h2>
-        <p class="updated">Updated September 24, 2026</p>
+        <p class="updated" id="sync-status">Connecting to email updates…</p>
       </div>
-      <div class="grid">
+      <div class="grid" id="application-grid">
         <article class="card"><span class="status in-progress">In progress</span><div class="address">852 Club House Rd S 1, Virginia Beach, VA 23452</div><p class="desc">Started and still needs attention or completion.</p></article>
         <article class="card"><span class="status in-progress">In progress</span><div class="address">41 King George Quay, Chesapeake, VA 23325</div><p class="desc">Started and still needs attention or completion.</p></article>
         <article class="card"><span class="status in-progress">In progress</span><div class="address">2704 Mark St, Chesapeake, VA 23324</div><p class="desc">Started and still needs attention or completion.</p></article>
@@ -135,10 +138,10 @@
         <article class="card"><span class="status submitted">Submitted</span><div class="address">1715 Lafayette Blvd 1, Norfolk, VA 23509</div><p class="desc">Application sent and waiting on the property manager.</p></article>
         <article class="card"><span class="status submitted">Submitted</span><div class="address">407 Maryland Ave, Portsmouth, VA 23707</div><p class="desc">Application sent and waiting on the property manager.</p></article>
         <article class="card"><span class="status submitted">Submitted</span><div class="address">435 London St 1, Portsmouth, VA 23704</div><p class="desc">Application sent and waiting on the property manager.</p></article>
-        <article class="card"><span class="status submitted">Submitted</span><div class="address">403 Dinwiddie St C, Portsmouth, VA 23704</div><p class="desc">Application sent and waiting on the property manager.</p></article>
-        <article class="card"><span class="status submitted">Submitted</span><div class="address">1610 Hampton Blvd B, Norfolk, VA 23517</div><p class="desc">Application sent and waiting on the property manager.</p></article>
+        <article class="card"><span class="status opened">Opened</span><div class="address">403 Dinwiddie St Unit C, Portsmouth, VA 23704</div><p class="desc">The landlord or property manager viewed this application.</p></article>
+        <article class="card"><span class="status opened">Opened</span><div class="address">1610 Hampton Blvd Unit B, Norfolk, VA 23517</div><p class="desc">The landlord or property manager viewed this application.</p></article>
         <article class="card"><span class="status submitted">Submitted</span><div class="address">428 Russell St 2, Portsmouth, VA 23707</div><p class="desc">Application sent and waiting on the property manager.</p></article>
-        <article class="card"><span class="status submitted">Submitted</span><div class="address">2515 Arkansas Ave B, Norfolk, VA 23513</div><p class="desc">Application sent and waiting on the property manager.</p></article>
+        <article class="card"><span class="status opened">Opened</span><div class="address">2515 Arkansas Ave Unit B, Norfolk, VA 23513</div><p class="desc">The landlord or property manager viewed this application.</p></article>
 
         <article class="card"><span class="status opened">Opened</span><div class="address">1157 Farrcroft Way, Virginia Beach, VA 23455</div><p class="desc">Email activity found and added to the tracker.</p></article>
         <article class="card"><span class="status opened">Opened</span><div class="address">113 Elmhurst Ct, Portsmouth, VA 23701</div><p class="desc">Email activity found and added to the tracker.</p></article>
@@ -146,5 +149,66 @@
       </div>
     </section>
   </div>
+
+  <script>
+    const feedUrl = "https://metcalf-rental-progress.metcalftimothy0414.chatgpt.site/api/public-applications";
+    const labels = {
+      in_progress: "In progress",
+      submitted: "Submitted",
+      opened: "Opened",
+      approved: "Approved",
+      declined: "Not selected",
+      message: "New message"
+    };
+    const descriptions = {
+      in_progress: "Started and still needs attention or completion.",
+      submitted: "Application sent and waiting on the property manager.",
+      opened: "The landlord or property manager viewed this application.",
+      approved: "Approved — contact the landlord and review the lease together.",
+      declined: "This property selected another applicant.",
+      message: "A new Zillow message arrived and may need a reply."
+    };
+
+    function render(data) {
+      const apps = Array.isArray(data.applications) ? data.applications : [];
+      const count = (status) => apps.filter((app) => app.status === status).length;
+      document.getElementById("total-count").textContent = apps.length;
+      document.getElementById("progress-count").textContent = count("in_progress");
+      document.getElementById("submitted-count").textContent = count("submitted");
+      document.getElementById("activity-count").textContent =
+        count("opened") + count("approved") + count("declined") + count("message");
+
+      document.getElementById("application-grid").innerHTML = apps.map((app) => {
+        const statusClass = app.status === "in_progress" ? "in-progress" : app.status;
+        const safeProperty = String(app.property || "Zillow application")
+          .replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+        return '<article class="card"><span class="status ' + statusClass + '">' +
+          (labels[app.status] || "Update") + '</span><div class="address">' +
+          safeProperty + '</div><p class="desc">' +
+          (descriptions[app.status] || "Status updated from Zillow email.") +
+          '</p></article>';
+      }).join("");
+
+      const checked = new Date(data.checkedAt);
+      document.getElementById("sync-status").textContent =
+        (data.emailConnected ? "Email connected" : "Showing saved applications") +
+        (Number.isNaN(checked.getTime()) ? "" : " • checked " + checked.toLocaleString());
+    }
+
+    async function refreshApplications() {
+      try {
+        const response = await fetch(feedUrl, { cache: "no-store" });
+        if (!response.ok) throw new Error("Feed unavailable");
+        render(await response.json());
+      } catch {
+        document.getElementById("sync-status").textContent =
+          "Saved applications shown • live email check temporarily unavailable";
+      }
+    }
+
+    refreshApplications();
+    setInterval(refreshApplications, 300000);
+  </script>
+
 </body>
 </html>
